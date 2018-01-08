@@ -5,7 +5,12 @@
   "repository": "https://github.com/olivierlesnicki/spotifychartsfr",
   "author": "Olivier Lesnicki <olivier.lesnicki@gmail.com>",
   "license": "MIT",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
+    "instagram-private-api": "huttarichard/instagram-private-api#master",
+    "moment": "^2.20.1",
     "webshot": "^0.18.0"
   }
 }
