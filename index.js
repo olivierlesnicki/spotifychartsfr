@@ -7,7 +7,7 @@ moment.locale("fr");
 const { INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD } = process.env;
 
 const device = new ig.Device(INSTAGRAM_USERNAME);
-const storage = new ig.CookieFileStorage("tmp/cookie-file-storage.json");
+const storage = new ig.CookieFileStorage("/tmp/cookie-file-storage.json");
 
 var custom_css = `
 .header-csv,
@@ -73,7 +73,7 @@ const capture = function(file_name, page) {
 
     webshot(
       "spotifycharts.com/regional/fr/daily/latest",
-      `tmp/${file_name}`,
+      `/tmp/${file_name}`,
       {
         screenSize: size,
         shotSize: size,
@@ -103,7 +103,7 @@ ig.Session.create(device, storage, INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
           medias.push({
             type: "photo",
             size: [size.width, size.height],
-            data: `tmp/page-${i}.jpeg`
+            data: `/tmp/page-${i}.jpeg`
           });
         }
         console.log("Uploading album to instagram");
