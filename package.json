@@ -1,0 +1,11 @@
+{
+  "name": "spotifychartsfr",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/olivierlesnicki/spotifychartsfr",
+  "author": "Olivier Lesnicki <olivier.lesnicki@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "webshot": "^0.18.0"
+  }
+}
