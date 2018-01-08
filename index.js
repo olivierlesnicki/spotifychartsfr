@@ -1,10 +1,12 @@
 const moment = require("moment");
 const ig = require("instagram-private-api").V1;
 const webshot = require("webshot");
+const redis = require("redis");
+const create_xray = require("x-ray");
 
 moment.locale("fr");
 
-const { INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD } = process.env;
+const { REDIS_URL, INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD } = process.env;
 
 const device = new ig.Device(INSTAGRAM_USERNAME);
 const storage = new ig.CookieFileStorage("/tmp/cookie-file-storage.json");
@@ -90,39 +92,81 @@ const capture = function(file_name, page) {
   });
 };
 
-ig.Session.create(device, storage, INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD)
-  .then(session => {
+let album_payload;
+let latest_charts_timestamp;
+let session;
+
+Promise.resolve()
+
+  .then(
+    () =>
+      new Promise((resolve, reject) => {
+        console.log("INFO", "fetching latest charts timestamp");
+        const x = create_xray();
+        x(
+          "https://spotifycharts.com/regional/fr/daily/latest",
+          ".chart-filters-list .responsive-select:last-child .responsive-select-value"
+        )((err, date) => {
+          if (err) return reject(err);
+          latest_charts_timestamp = moment(date, "MM/DD/YYYY").toString();
+          console.log("INFO", latest_charts_timestamp);
+          resolve();
+        });
+      })
+  )
+
+  .then(() =>
+    ig.Session.create(
+      device,
+      storage,
+      INSTAGRAM_USERNAME,
+      INSTAGRAM_PASSWORD
+    ).then(payload => (session = payload))
+  )
+
+  .then(() => {
     let promise = Promise.resolve();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 5; i++) {
       promise = promise.then(() => capture(`page-${i}.jpeg`, i));
     }
-    return promise
-      .then(() => {
-        const medias = [];
-        for (let i = 0; i < 10; i++) {
-          medias.push({
-            type: "photo",
-            size: [size.width, size.height],
-            data: `/tmp/page-${i}.jpeg`
-          });
-        }
-        console.log("Uploading album to instagram");
-        return ig.Upload.album(session, medias);
-      })
-      .then(payload => {
-        console.log("Configuring album");
-        return ig.Media.configureAlbum(
-          session,
-          payload,
-          "akward caption",
-          false
-        );
+    return promise.then(() => session);
+  })
+
+  .then(() => {
+    console.log("Uploading album to instagram");
+
+    const medias = [];
+    for (let i = 0; i < 5; i++) {
+      medias.push({
+        type: "photo",
+        size: [size.width, size.height],
+        data: `/tmp/page-${i}.jpeg`
       });
+    }
+    return ig.Upload.album(session, medias).then(
+      payload => (album_payload = payload)
+    );
+  })
+
+  .then(() => {
+    console.log("Configuring album");
+
+    const date = moment(latest_charts_timestamp).format(
+      "MMM Do YYYY #DDMMYYYY"
+    );
+
+    return ig.Media.configureAlbum(
+      session,
+      album_payload,
+      `Top 50 Spotify du ${date}`,
+      false
+    );
   })
 
   .then(() => {
     console.log("success");
   })
+
   .catch(err => {
-    console.error("error", err);
+    console.error("error", err.message);
   });

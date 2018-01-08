@@ -11,6 +11,8 @@
   "dependencies": {
     "instagram-private-api": "huttarichard/instagram-private-api#master",
     "moment": "^2.20.1",
-    "webshot": "^0.18.0"
+    "redis": "^2.8.0",
+    "webshot": "^0.18.0",
+    "x-ray": "^2.3.2"
   }
 }
