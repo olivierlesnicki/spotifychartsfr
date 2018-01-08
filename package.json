@@ -12,6 +12,7 @@
     "instagram-private-api": "huttarichard/instagram-private-api#master",
     "moment": "^2.20.1",
     "redis": "^2.8.0",
+    "shortid": "^2.2.8",
     "webshot": "^0.18.0",
     "x-ray": "^2.3.2"
   }

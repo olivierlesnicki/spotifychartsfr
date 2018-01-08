@@ -3,10 +3,15 @@ const ig = require("instagram-private-api").V1;
 const webshot = require("webshot");
 const redis = require("redis");
 const create_xray = require("x-ray");
+const shortid = require("shortid");
+
+const { REDIS_URL, INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD } = process.env;
+const NUMBER_OF_PAGES = 2;
+const TRACK_PER_PAGES = 10;
 
 moment.locale("fr");
 
-const { REDIS_URL, INSTAGRAM_USERNAME, INSTAGRAM_PASSWORD } = process.env;
+const client = redis.createClient(REDIS_URL);
 
 const device = new ig.Device(INSTAGRAM_USERNAME);
 const storage = new ig.CookieFileStorage("/tmp/cookie-file-storage.json");
@@ -60,10 +65,10 @@ var size = {
   height: 790
 };
 
-const capture = function(file_name, page) {
-  console.log(`capturing: ${file_name}`);
+const capture = function(date, file_name, page) {
+  console.log("INFO", `capturing: ${file_name}`);
   return new Promise(function(resolve, reject) {
-    for (let i = 0; i < 10 * page; i++) {
+    for (let i = 0; i < TRACK_PER_PAGES * page; i++) {
       custom_css =
         custom_css +
         `
@@ -74,8 +79,8 @@ const capture = function(file_name, page) {
     }
 
     webshot(
-      "spotifycharts.com/regional/fr/daily/latest",
-      `/tmp/${file_name}`,
+      `spotifycharts.com/regional/fr/daily/${date}`,
+      file_name,
       {
         screenSize: size,
         shotSize: size,
@@ -92,81 +97,103 @@ const capture = function(file_name, page) {
   });
 };
 
-let album_payload;
-let latest_charts_timestamp;
-let session;
-
-Promise.resolve()
-
-  .then(
-    () =>
-      new Promise((resolve, reject) => {
-        console.log("INFO", "fetching latest charts timestamp");
-        const x = create_xray();
-        x(
-          "https://spotifycharts.com/regional/fr/daily/latest",
-          ".chart-filters-list .responsive-select:last-child .responsive-select-value"
-        )((err, date) => {
-          if (err) return reject(err);
-          latest_charts_timestamp = moment(date, "MM/DD/YYYY").toString();
-          console.log("INFO", latest_charts_timestamp);
-          resolve();
-        });
-      })
-  )
-
-  .then(() =>
-    ig.Session.create(
-      device,
-      storage,
-      INSTAGRAM_USERNAME,
-      INSTAGRAM_PASSWORD
-    ).then(payload => (session = payload))
-  )
-
-  .then(() => {
-    let promise = Promise.resolve();
-    for (let i = 0; i < 5; i++) {
-      promise = promise.then(() => capture(`page-${i}.jpeg`, i));
-    }
-    return promise.then(() => session);
-  })
-
-  .then(() => {
-    console.log("Uploading album to instagram");
-
-    const medias = [];
-    for (let i = 0; i < 5; i++) {
-      medias.push({
-        type: "photo",
-        size: [size.width, size.height],
-        data: `/tmp/page-${i}.jpeg`
-      });
-    }
-    return ig.Upload.album(session, medias).then(
-      payload => (album_payload = payload)
-    );
-  })
-
-  .then(() => {
-    console.log("Configuring album");
-
-    const date = moment(latest_charts_timestamp).format(
-      "MMM Do YYYY #DDMMYYYY"
-    );
-
-    return ig.Media.configureAlbum(
-      session,
-      album_payload,
-      `Top 50 Spotify du ${date}`,
-      false
-    );
-  })
-
-  .then(() => {
-    console.log("success");
-  })
-
-  .catch(err => {
-    console.error("error", err.message);
+const fetch_latest_charts_date = () =>
+  new Promise((resolve, reject) => {
+    console.log("INFO", "fetching latest charts timestamp");
+    const x = create_xray();
+    x(
+      "https://spotifycharts.com/regional/fr/daily/latest",
+      ".chart-filters-list .responsive-select:last-child .responsive-select-value"
+    )((err, date) => {
+      if (err) return reject(err);
+      resolve(moment(date, "MM/DD/YYYY").format("YYYY-MM-DD"));
+    });
   });
+
+const fetch_session = async () => {
+  console.log("INFO", "fetch session");
+  return ig.Session.create(
+    device,
+    storage,
+    INSTAGRAM_USERNAME,
+    INSTAGRAM_PASSWORD
+  );
+};
+
+const capture_charts = async (seed, date = "latest") => {
+  console.log("INFO", "capture charts");
+  for (let i = 0; i < NUMBER_OF_PAGES; i++) {
+    await capture(date, `tmp/${seed}-page-${i}.jpeg`, i);
+  }
+};
+
+const upload_album = async (session, seed, date) => {
+  console.log("INFO", "upload album");
+
+  const medias = [];
+  for (let i = 0; i < NUMBER_OF_PAGES; i++) {
+    medias.push({
+      type: "photo",
+      size: [size.width, size.height],
+      data: `tmp/${seed}-page-${i}.jpeg`
+    });
+  }
+
+  const payload = await ig.Upload.album(session, medias);
+
+  const date_moment = moment(date, "YYYY-MM-DD");
+  const comment = `Top ${NUMBER_OF_PAGES *
+    TRACK_PER_PAGES} Spotify du ${date_moment.format("Do MMMM YYYY")}`;
+
+  return ig.Media.configureAlbum(session, payload, comment, false);
+};
+
+const redis_get = key =>
+  new Promise((resolve, reject) => {
+    client.get(key, (err, value) => {
+      if (err) return reject(err);
+      resolve(value);
+    });
+  });
+
+const redis_set = (key, value) =>
+  new Promise((resolve, reject) => {
+    client.set(key, value, err => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+
+const post = async date => {
+  console.log("INFO", "post", date);
+  try {
+    const seed = shortid.generate();
+    const session = await fetch_session();
+
+    await capture_charts(seed, date);
+    await upload_album(session, seed, date);
+
+    await redis_set(date, 1);
+
+    console.log("success");
+  } catch (e) {
+    console.log("error", e.message);
+    console.error(e);
+  }
+};
+
+const worker = async force => {
+  const date = await fetch_latest_charts_date();
+  const is_posted = await redis_get(date);
+
+  if (!force && !!is_posted) {
+    console.log("INFO", "already posted", date);
+    console.log("success");
+  } else {
+    await post(date);
+  }
+
+  client.quit();
+};
+
+worker();
