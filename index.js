@@ -106,7 +106,9 @@ const fetch_latest_charts_date = () =>
       ".chart-filters-list .responsive-select:last-child .responsive-select-value"
     )((err, date) => {
       if (err) return reject(err);
-      resolve(moment(date, "MM/DD/YYYY").format("YYYY-MM-DD"));
+      const latest_charts_moment = moment(date, "MM/DD/YYYY");
+      if (!latest_charts_moment.isValid()) throw new Error("Invalid date");
+      resolve(latest_charts_moment.format("YYYY-MM-DD"));
     });
   });
 
@@ -183,14 +185,19 @@ const post = async date => {
 };
 
 const worker = async force => {
-  const date = await fetch_latest_charts_date();
-  const is_posted = await redis_get(date);
+  try {
+    const date = await fetch_latest_charts_date();
+    const is_posted = await redis_get(date);
 
-  if (!force && !!is_posted) {
-    console.log("INFO", "already posted", date);
-    console.log("success");
-  } else {
-    await post(date);
+    if (!force && !!is_posted) {
+      console.log("INFO", "already posted", date);
+      console.log("success");
+    } else {
+      await post(date);
+    }
+  } catch (e) {
+    console.log("error", e.message);
+    console.error(e);
   }
 
   client.quit();
