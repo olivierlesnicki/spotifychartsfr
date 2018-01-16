@@ -61,7 +61,7 @@ module.exports = charts => {
                    url('https://spotifycharts.com/fonts/CircularSpotifyTxT-Bold.ttf')  format('truetype'), /* Safari, Android, iOS */;
             }            
             body {
-              font-family: Spotify, Helvetica, sans-serif;
+              font-family: Spotify, Circular, "Helvetica Neue", Helvetica, sans-serif;
               font-weight: 400;
               background: #171717;
             }
