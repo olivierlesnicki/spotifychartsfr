@@ -20,7 +20,6 @@
     "request": "^2.83.0",
     "request-promise": "^4.2.2",
     "shortid": "^2.2.8",
-    "webshot": "^0.18.0",
-    "x-ray": "^2.3.2"
+    "webshot": "^0.18.0"
   }
 }
