@@ -54,7 +54,7 @@ const worker = async date => {
     const image_urls = await create_image_urls(next_date);
 
     if (program.upload) {
-      await upload(date, image_urls);
+      await upload(next_date, image_urls);
       if (!date) await redis.set("last-date", next_date);
     } else {
       console.log("INFO", "no upload");
