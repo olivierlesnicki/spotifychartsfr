@@ -1,6 +1,7 @@
 const shortid = require("shortid");
 const webshot = require("webshot");
 const _ = require("lodash");
+const numeral = require("numeral");
 
 module.exports = charts => {
   console.log("INFO", "screenshot");
@@ -27,7 +28,7 @@ module.exports = charts => {
           <span class="track-name">${track.name}</span>
           <span class="track-artist">de ${track.artist}</span>
         </div>
-        <div class="chart-streams">${track.streams}</div>
+        <div class="chart-streams">${numeral(track.streams).format("0 0")}</div>
       </div>
     </div>
   `
