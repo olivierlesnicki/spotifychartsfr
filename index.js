@@ -4,6 +4,7 @@ const program = require("commander");
 const moment = require("moment");
 const _ = require("lodash");
 
+const capture = require("./src/capture");
 const screenshot = require("./src/screenshot");
 const fetch_charts = require("./src/fetch-charts");
 const fetch_charts_images = require("./src/fetch-charts-images");
@@ -33,7 +34,7 @@ const create_image_urls = async date => {
   const image_urls = [];
 
   for (let i = 0; i < 2; i++) {
-    const image_url = await screenshot(_.drop(charts_with_images, i * 10));
+    const image_url = await capture(_.drop(charts_with_images, i * 10));
     image_urls.push(image_url);
   }
 
