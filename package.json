@@ -12,6 +12,7 @@
     "canvas": "^2.0.0-alpha.9",
     "cheerio": "^1.0.0-rc.2",
     "commander": "^2.13.0",
+    "fs-extra": "^5.0.0",
     "instagram-private-api": "huttarichard/instagram-private-api#master",
     "lodash": "^4.17.4",
     "moment": "^2.20.1",

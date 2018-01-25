@@ -3,6 +3,7 @@
 const program = require("commander");
 const moment = require("moment");
 const _ = require("lodash");
+const fs = require("fs-extra");
 
 const capture = require("./src/capture");
 const screenshot = require("./src/screenshot");
@@ -19,6 +20,8 @@ program
   .option("-u, --upload", "Upload to Instagram")
   .option("-d, --date [date]", "Select a date")
   .parse(process.argv);
+
+fs.ensureDirSync("tmp");
 
 const create_image_urls = async date => {
   console.log("INFO", "work");
