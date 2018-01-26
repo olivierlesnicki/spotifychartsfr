@@ -18,6 +18,7 @@
     "moment": "^2.20.1",
     "numeral": "^2.0.6",
     "papaparse": "^4.3.6",
+    "png-to-jpeg": "^1.0.1",
     "redis": "^2.8.0",
     "request": "^2.83.0",
     "request-promise": "^4.2.2",

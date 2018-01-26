@@ -3,6 +3,7 @@ const { createCanvas, registerFont, Image } = require("canvas");
 const shortid = require("shortid");
 const request = require("request-promise");
 const numeral = require("numeral");
+const to_jpeg = require("png-to-jpeg");
 
 numeral.localeData().delimiters.thousands = " ";
 
@@ -165,12 +166,15 @@ const capture = async charts => {
   }
 
   const id = shortid.generate();
-  const path = `tmp/${id}.png`;
+  const path = `tmp/${id}.jpeg`;
 
-  const data = canvas.toDataURL().replace(/^data:image\/\w+;base64,/, "");
+  const data = canvas
+    .toDataURL("image/png;base64;")
+    .replace(/^data:image\/\w+;base64,/, "");
   const buffer = new Buffer(data, "base64");
+  const jpeg_data = await to_jpeg({ quality: 90 })(buffer);
 
-  fs.writeFileSync(path, buffer);
+  fs.writeFileSync(path, jpeg_data);
 
   return path;
 };
